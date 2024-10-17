@@ -10,7 +10,7 @@ from client_socket import ClientSocket
 class ClientGUI:
     client_socket = ClientSocket
 
-    def __init__(self, theme):
+    def __init__(self, theme='dark'):
         self.window_title = "NetSweep"
         # Farben definieren
         self.yellow_color = [255, 255, 0, 100]  # Gelb mit Transparenz
@@ -29,7 +29,7 @@ class ClientGUI:
             self.set_light_theme()
 
         # Create main window
-        with dpg.window(label="Geräte", width=1200, height=400, no_close=True):
+        with dpg.window(label="Geräte", width=1200, height=400, no_close=True, tag='window_geraete'):
             with dpg.table(header_row=True,
                 row_background=True,
                 delay_search=True,
@@ -173,6 +173,34 @@ class ClientGUI:
         data = json.loads(geraete_liste)
         self.update_table(data)
         self.color_table()
+        self.update_title(data)
+
+    def update_title(self, data):
+        def calculate_completed_percentage(data):
+            total_tasks = 0
+            completed_tasks = 0
+
+            for device in data:
+                checklists = device.get('checklisten', {})
+                for checklist in checklists.values():
+                    medical = checklist.get('Medical', {})
+                    aufgaben = medical.get('Aufgaben', [])
+                    for task_dict in aufgaben:
+                        for task_name, task_completed in task_dict.items():
+                            total_tasks += 1
+                            if task_completed:
+                                completed_tasks += 1
+
+            if total_tasks == 0:
+                return 0
+            else:
+                percentage = (completed_tasks / total_tasks) * 100
+                return percentage
+
+        network_name = "Network"
+        devices_count = dpg.get_item_children("table", 1)
+        if devices_count:
+            dpg.set_item_label("window_geraete", label=f"{len(devices_count)} interfaces - {len([x for x in data if x['online_status']])} online - {round(calculate_completed_percentage(data), 2)}% done")
 
     def update_table(self, geraete_liste):
 
@@ -319,6 +347,7 @@ class ClientGUI:
     def add_button(self, geraet, row_id):
 
         def execute_terminal_command(s, u, a):
+            print(f"executing terminal command: {osascript_command}")
             os.system(f'osascript -e \'{osascript_command}\'')
 
         benutzer = geraet["benutzer"].replace(" ", "%20") if geraet["benutzer"] else ""

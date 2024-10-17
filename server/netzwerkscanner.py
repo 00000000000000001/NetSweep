@@ -100,19 +100,22 @@ class Networkscanner:
             mac_address = self.get_mac_address(ip)
             mdns_name = self.get_mdns_name(ip)
             vnc_reachable = self.get_vnc_status(ip)
-            results.append(
-                Geraet(
-                    mac_address if mac_address else 'Unbekannt',
-                    str(ip),
-                    mdns_name if mdns_name else 'Unbekannt',
-                    hostname if hostname else 'Unbekannt',
-                    True if vnc_reachable else False,
-                    True,
-                    "",
-                    "",
-                    -1
+
+            if mac_address:
+
+                results.append(
+                    Geraet(
+                        mac_address,
+                        str(ip),
+                        mdns_name if mdns_name else 'Unbekannt',
+                        hostname if hostname else 'Unbekannt',
+                        True if vnc_reachable else False,
+                        True,
+                        "",
+                        "",
+                        -1
+                    )
                 )
-            )
 
     def get_network_range(self, ip: str, subnetzmaske: str):
         """Berechnet den IP-Bereich des Netzwerks basierend auf IP und Netzmaske."""

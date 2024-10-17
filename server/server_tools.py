@@ -69,8 +69,68 @@ class ServerTools:
                 self.db.insert_netzwerkteilnahme(network_id, device_id)
                 say(f"✅ Gerät hinzugefügt.")
 
-        def distribute_checklist(network_id):
+        def distribute_checklist_network(network_id, json_data):
 
+            devices = self.db.select_devices(network_id)
+
+            assert(isinstance(devices, list))
+            assert(devices)
+
+            for device in devices:
+                distribute_checklist(device.id, json_data)
+
+        def add_credentials_network(network_id, credentials: tuple):
+            devices = self.db.select_devices(network_id)
+
+            assert(isinstance(devices, list))
+            assert(devices)
+
+            for device in devices:
+                add_credentials(device.id, credentials)
+
+        def remove_credentials_network(network_id):
+            devices = self.db.select_devices(network_id)
+
+            assert(isinstance(devices, list))
+            assert(devices)
+
+            for device in devices:
+
+                remove_credentials(device.id)
+
+        def remove_checklists_network(network_id):
+            devices = self.db.select_devices(network_id)
+
+            assert(isinstance(devices, list))
+            assert(devices)
+
+            for device in devices:
+                remove_checklists(device.id)
+
+        def choose_device(network_id: int) -> int:
+            row_devices = self.db.select_devices(network_id)
+
+            assert(isinstance(row_devices, list))
+            assert(row_devices)
+
+            liste = list()
+            for device in row_devices:
+                liste.append(f"{device.id} - {device.mac}, {device.mdns_name}, {device.dns_name}")
+
+            choice = int(ask("Wähle:\n" + '\n'.join(liste)))
+
+            return choice
+
+        def remove_device(device_id: int):
+            sql = f"""
+            DELETE FROM geraete
+            WHERE id = {device_id};
+            """
+
+            self.commit_sql(sql)
+            say(f"✅ Gerät {device_id} gelöscht.")
+
+        def ask_for_checklist_filepath():
             def read_json_file(file_path):
                 try:
                     with open(file_path, 'r') as file:
@@ -95,120 +155,98 @@ class ServerTools:
                 print(f"Fehler: {error}")
                 return
 
-            devices = self.db.select_devices(network_id)
+            return json_data
 
-            assert(isinstance(devices, list))
-            assert(devices)
-
-            for device in devices:
-                self.db.insert_checkliste(json.dumps(json_data), device.id)
-                say(f"✅ Checklist zu {device.mac} hinzugefügt.")
-
-        def add_credentials_network(network_id):
+        def ask_for_credentials() -> tuple:
             user = ask("Nutzername?")
             password = ask("Passwort?")
             correct = ask(f"Nutzer: {user}\nPasswort: {password}\n\nRichtig? (j/n)")
 
             if not correct in ['j', 'y', 'ja', 'yes']:
-                return
+                return ()
 
-            devices = self.db.select_devices(network_id)
+            return (user, password)
 
-            assert(isinstance(devices, list))
-            assert(devices)
+        def distribute_checklist(device_id, json_data):
+            self.db.insert_checkliste(json.dumps(json_data), device_id)
+            say(f"✅ Checklist zu {device_id} hinzugefügt.")
 
-            for device in devices:
-                user_id = self.db.insert_benutzer(user, password)
+        def add_credentials(device_id: int, credentials: tuple):
+            username = credentials[0]
+            password = credentials[1]
+            user_id = self.db.insert_benutzer(username, password)
 
-                assert(isinstance(user_id, int))
+            assert(isinstance(user_id, int))
 
-                self.db.insert_anmeldung(device.id, user_id)
-                say(f"✅ Nutzer '{user}' für {device.mac} hinterlegt.")
+            self.db.insert_anmeldung(device_id, user_id)
+            say(f"✅ Nutzer '{username}' für {device_id} hinterlegt.")
 
-        def remove_credentials_network(network_id):
-            devices = self.db.select_devices(network_id)
-
-            assert(isinstance(devices, list))
-            assert(devices)
-
-            for device in devices:
-
-                sql = f"""
-                SELECT benutzer_id FROM anmeldungen
-                WHERE geraet_id = {device.id};
-                """
-
-                row_user_ids = self.commit_sql(sql)
-
-                sql = f"""
-                DELETE FROM anmeldungen
-                WHERE geraet_id = {device.id};
-                """
-
-                self.commit_sql(sql)
-
-                assert(isinstance(row_user_ids, list))
-                assert(row_user_ids)
-
-                for user_id in row_user_ids:
-
-                    user_id = user_id[0]
-
-                    sql = f"""
-                    DELETE FROM benutzer
-                    WHERE id = {user_id};
-                    """
-
-                    self.commit_sql(sql)
-
-                    say(f"✅ Nutzer '{user_id}' für {device.mac} entfernt.")
-
-        def remove_checklists_network(network_id):
-
-            devices = self.db.select_devices(network_id)
-
-            assert(isinstance(devices, list))
-            assert(devices)
-
-            for device in devices:
-                sql = f"""
-                DELETE FROM checklisten
-                WHERE geraet_id = {device.id};
-                """
-
-                self.commit_sql(sql)
-                say(f"✅ Checklisten gelöscht für Geraet {device.mac}.")
-
-        def choose_device(network_id: int) -> int:
-            row_devices = self.db.select_devices(network_id)
-
-            assert(isinstance(row_devices, list))
-            assert(row_devices)
-
-            liste = list()
-            for device in row_devices:
-                liste.append(f"{device.id} - {device.mac}, {device.mdns_name}, {device.dns_name}")
-
-            choice = int(ask("Wähle:\n" + '\n'.join(liste)))
-
-            return choice
-
-        def remove_device(device_id: int):
+        def remove_credentials(device_id):
             sql = f"""
-            DELETE FROM geraete
-            WHERE id = {device_id};
+            SELECT benutzer_id FROM anmeldungen
+            WHERE geraet_id = {device_id};
+            """
+
+            row_user_ids = self.commit_sql(sql)
+
+            sql = f"""
+            DELETE FROM anmeldungen
+            WHERE geraet_id = {device_id};
             """
 
             self.commit_sql(sql)
-            say(f"✅ Geraet {device_id} gelöscht.")
+
+            assert(isinstance(row_user_ids, list))
+            assert(row_user_ids)
+
+            for user_id in row_user_ids:
+
+                user_id = user_id[0]
+
+                sql = f"""
+                DELETE FROM benutzer
+                WHERE id = {user_id};
+                """
+
+                self.commit_sql(sql)
+
+                say(f"✅ Nutzer '{user_id}' für {device_id} entfernt.")
+
+        def remove_checklists(device_id):
+            sql = f"""
+            DELETE FROM checklisten
+            WHERE geraet_id = {device_id};
+            """
+
+            self.commit_sql(sql)
+            say(f"✅ Checklisten gelöscht für Gerät {device_id}.")
+
+        def edit_device(device_id):
+            text = "1 - Checkliste auslegen\n"\
+            "2 - Credentials hinterlegen\n"\
+            "3 - Credentials löschen\n"\
+            "4 - Checklisten löschen\n"\
+
+            choice = ask(text)
+
+            match choice:
+                case '1':
+                    distribute_checklist(device_id, ask_for_checklist_filepath())
+                case '2':
+                    add_credentials(device_id, ask_for_credentials())
+                case '3':
+                    remove_credentials(device_id)
+                case '4':
+                    remove_checklists(device_id)
 
         def edit_network(network_id):
             text = "1 - Gerät hinzufügen\n"\
-            "2 - Checkliste auslegen (für alle Geraete im Netz)\n"\
-            "3 - Credentials hinterlegen (für alle Geraete im Netz)\n"\
-            "4 - Credentials löschen (für alle Geraete im Netz)\n"\
-            "5 - Checklisten löschen (für alle Geraete im Netz)\n"\
-            "6 - Geraet entfernen"
+            "2 - Checkliste auslegen (für alle Geräte im Netzwerk)\n"\
+            "3 - Credentials hinterlegen (für alle Geräte im Netzwerk)\n"\
+            "4 - Credentials löschen (für alle Geräte im Netzwerk)\n"\
+            "5 - Checklisten löschen (für alle Geräte im Netzwerk)\n"\
+            "6 - Gerät entfernen\n"\
+            "7 - Gerät bearbeiten"
 
             choice = ask(text)
 
@@ -216,15 +254,17 @@ class ServerTools:
                 case '1':
                     insert_device(network_id)
                 case '2':
-                    distribute_checklist(network_id)
+                    distribute_checklist_network(network_id, ask_for_checklist_filepath())
                 case '3':
-                    add_credentials_network(network_id)
+                    add_credentials_network(network_id, ask_for_credentials())
                 case '4':
                     remove_credentials_network(network_id)
                 case '5':
                     remove_checklists_network(network_id)
                 case '6':
                     remove_device(choose_device(network_id))
+                case '7':
+                    edit_device(choose_device(network_id))
 
         def show_menu():
             text = "1 - Server starten\n"\

@@ -200,3 +200,5 @@ if __name__ == "__main__":
         )
 
         server.start()
+
+# python3.11 -m nuitka --standalone --onefile --follow-imports server.py

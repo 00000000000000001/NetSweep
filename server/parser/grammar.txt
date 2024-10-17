@@ -1,0 +1,2 @@
+<skript> := <geraet>*
+<geraet> := <mac> (<checklist>*|<credentials>*)?

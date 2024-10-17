@@ -1,12 +1,13 @@
 import re
 
 def normalize_mac_address(mac: str) -> str:
+    assert(mac != 'unbekannt')
     # Entferne alle nicht-hexadezimalen Zeichen (z.B. :, -, .)
     parts = re.split('[:-]', mac)
 
     # Prüfen, ob die Anzahl der Teile korrekt ist (6 Teile)
     if len(parts) != 6:
-        raise ValueError("Ungültige MAC-Adresse")
+        raise ValueError(f"Ungültige MAC-Adresse: {mac}")
 
     # Stelle sicher, dass jeder Teil genau zwei Zeichen lang ist
     normalized_parts = [part.zfill(2).upper() for part in parts]
