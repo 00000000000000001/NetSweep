@@ -180,22 +180,32 @@ class ClientGUI:
             total_tasks = 0
             completed_tasks = 0
 
+            def count_tasks(item):
+                nonlocal total_tasks, completed_tasks
+
+                if isinstance(item, dict):
+                    for value in item.values():
+                        count_tasks(value)
+                elif isinstance(item, list):
+                    for element in item:
+                        if isinstance(element, dict):
+                            for task_name, task_completed in element.items():
+                                total_tasks += 1
+                                if task_completed:
+                                    completed_tasks += 1
+                        else:
+                            count_tasks(element)
+
             for device in data:
                 checklists = device.get('checklisten', {})
-                for checklist in checklists.values():
-                    medical = checklist.get('Medical', {})
-                    aufgaben = medical.get('Aufgaben', [])
-                    for task_dict in aufgaben:
-                        for task_name, task_completed in task_dict.items():
-                            total_tasks += 1
-                            if task_completed:
-                                completed_tasks += 1
+                count_tasks(checklists)
 
             if total_tasks == 0:
                 return 0
             else:
                 percentage = (completed_tasks / total_tasks) * 100
-                return percentage
+                return round(percentage, 2)
+
 
         network_name = "Network"
         devices_count = dpg.get_item_children("table", 1)
