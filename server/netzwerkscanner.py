@@ -27,7 +27,7 @@ class Networkscanner:
             return
         logging.info(msg)
 
-    def get_vnc_status(self, ip: str):
+    def get_vnc_status(self, ip: str) -> bool:
         """Überprüft, ob ein VNC-Server auf dem Standardport 5900 erreichbar ist."""
         self.info(f"ermittle VNC-Status von {ip}")
         vnc_port = 5900
@@ -63,9 +63,9 @@ class Networkscanner:
         except Exception as e:
             return None
 
-    def get_hostname(self, ip: str):
-        """Ermittelt den Hostnamen zu einer IP-Adresse."""
-        self.info(f"ermittle Hostname von {ip}")
+    def get_dns_name(self, ip: str):
+        """Ermittelt des dns-namen zu einer IP-Adresse."""
+        self.info(f"ermittle dns-name von {ip}")
         try:
             hostname = socket.gethostbyaddr(str(ip))[0]
         except (socket.herror, socket.gaierror):
@@ -96,20 +96,19 @@ class Networkscanner:
         """Scannt eine einzelne IP-Adresse und gibt die Informationen in die Ergebnisliste zurück."""
         if self.ping_ip(ip):
             self.info(f"Device found: {ip}")
-            hostname = self.get_hostname(ip)
             mac_address = self.get_mac_address(ip)
-            mdns_name = self.get_mdns_name(ip)
-            vnc_reachable = self.get_vnc_status(ip)
 
             if mac_address:
+
+                print(mac_address)
 
                 results.append(
                     Geraet(
                         mac_address,
                         str(ip),
-                        mdns_name if mdns_name else 'Unbekannt',
-                        hostname if hostname else 'Unbekannt',
-                        True if vnc_reachable else False,
+                        "",
+                        "",
+                        False,
                         True,
                         "",
                         "",
@@ -128,8 +127,6 @@ class Networkscanner:
         self.info(f"Manuelle IP-Adresse: {ip}, Netzmaske: {subnetzmaske}")
         self.info("Suche nach Geräten im Netzwerk...")
 
-        print("scanne netzwerk")
-
         results = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
@@ -137,7 +134,7 @@ class Networkscanner:
             for future in concurrent.futures.as_completed(futures):
                 future.result()  # Warten auf alle Threads
 
-        print(f"fertig gescannt. {len(results)} interfaces gefunden. Gescannte IP's: {len(network_range)}")
+        # print(f"fertig gescannt. {len(results)} interfaces gefunden. Gescannte IP's: {len(network_range)}")
 
         return results
 
