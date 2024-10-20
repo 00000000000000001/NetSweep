@@ -35,10 +35,8 @@ class NetSweep:
             assert(basis_ip)
             assert(subnetzmaske)
 
-            geraete_online = self.scanner.scan(basis_ip, subnetzmaske)
             geraete_db = self.db.select_devices(netzwerk_id)
-
-            liste = []
+            geraete_online = self.scanner.scan(basis_ip, subnetzmaske, [geraet.mac for geraet in geraete_db])
 
             for geraet in geraete_db:
 
@@ -56,36 +54,11 @@ class NetSweep:
                     geraet.mdns_name = ''
                     geraet.vnc_status = False
                     geraet.online_status = False
-
-                liste.append(geraet)
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-                futures = {}
-                for geraet in liste:
-                    # Submit the deepscan task and store the future object in a dictionary
-                    if geraet.online_status:
-                        futures[geraet] = executor.submit(self.deepscan, geraet)
-                    else:
-                        self.update_geraet(geraet)
-
-                # Iterate over the futures to ensure that deepscan is completed before updating
-                for geraet, future in futures.items():
-                    future.result()  # This will block until deepscan(geraet) finishes
-                    self.update_geraet(geraet)
+#
+                self.update_geraet(geraet)
 
             if self.callback:
                 self.callback()
-
-
-    def deepscan(self, geraet):
-        assert(geraet.ip)
-        assert(geraet.online_status)
-        print(f"scanning {geraet.mac} for dns name")
-        geraet.dns_name = self.scanner.get_dns_name(geraet.ip) or ''
-        print(f"scanning {geraet.mac} for mdns name")
-        geraet.mdns_name = self.scanner.get_mdns_name(geraet.ip) or ''
-        print(f"scanning {geraet.mac} for vnc status")
-        geraet.vnc_status = self.scanner.get_vnc_status(geraet.ip) or False
 
 
     def update_geraet(self, geraet: Geraet):

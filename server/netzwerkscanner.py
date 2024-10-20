@@ -7,6 +7,7 @@ import socket
 from geraet import Geraet
 import concurrent.futures
 import logging
+from utils import normalize_mac_address
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,10 +23,12 @@ class Networkscanner:
         self.max_threads = max_threads
         self.vnc_timeout = vnc_timeout
 
+
     def info(self, msg):
         if not self.verbose:
             return
         logging.info(msg)
+
 
     def get_vnc_status(self, ip: str) -> bool:
         """Überprüft, ob ein VNC-Server auf dem Standardport 5900 erreichbar ist."""
@@ -37,6 +40,7 @@ class Networkscanner:
         except (socket.timeout, ConnectionRefusedError, OSError):
             return False
 
+
     def get_mdns_name(self, ip: str):
         """Ermittelt den mDNS-Namen einer IP-Adresse."""
         self.info(f"ermittle mDNS-Name von {ip}")
@@ -47,7 +51,8 @@ class Networkscanner:
         except subprocess.CalledProcessError:
             return None
 
-    def get_mac_address(self, ip: str):
+
+    def get_normalized_mac(self, ip: str):
         """Ermittelt die MAC-Adresse eines Hosts basierend auf der IP-Adresse."""
         self.info(f"ermittle MAC-Adresse von {ip}")
         try:
@@ -59,9 +64,10 @@ class Networkscanner:
                 command = f'arp -a {ip}'
                 result = subprocess.check_output(command, shell=True).decode()
                 mac_address = result.split()[1]
-            return mac_address
+            return normalize_mac_address(mac_address)
         except Exception as e:
             return None
+
 
     def get_dns_name(self, ip: str):
         """Ermittelt des dns-namen zu einer IP-Adresse."""
@@ -71,6 +77,7 @@ class Networkscanner:
         except (socket.herror, socket.gaierror):
             hostname = None
         return hostname
+
 
     def ping_ip(self, ip: str):
         """Pingt eine IP-Adresse, um zu prüfen, ob das Gerät erreichbar ist."""
@@ -92,25 +99,41 @@ class Networkscanner:
 
         return success
 
-    def scan_ip(self, ip: str, results: List[Geraet]):
-        """Scannt eine einzelne IP-Adresse und gibt die Informationen in die Ergebnisliste zurück."""
+
+    def scan_ip(self, ip: str, results: list, target_macs: list):
+        """Scan a single IP address and add the information to the results list."""
         if self.ping_ip(ip):
             self.info(f"Device found: {ip}")
-            mac_address = self.get_mac_address(ip)
+            mac = self.get_normalized_mac(ip)
+            dns_name = ''
+            mdns_name = ''
+            vnc_status = False
 
-            if mac_address:
+            if not target_macs or (target_macs and mac in target_macs):
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
+                    # Submit the tasks to the executor
+                    dns_future = executor.submit(self.get_dns_name, ip)
+                    mdns_future = executor.submit(self.get_mdns_name, ip)
+                    vnc_future = executor.submit(self.get_vnc_status, ip)
 
-                print(mac_address)
+                    # Get the results
+                    dns_name = dns_future.result() or ''
+                    mdns_name = mdns_future.result() or ''
+                    vnc_status = vnc_future.result() or False
 
-                results.append(
-                    Geraet(mac_address, str(ip), "", "", False, True, "", "", -1))
+            if mac:
+                # Add the result to the results list
+                results.append(Geraet(mac, str(ip), mdns_name, dns_name, vnc_status, True, "", "", -1))
+
 
     def get_network_range(self, ip: str, subnetzmaske: str):
         """Berechnet den IP-Bereich des Netzwerks basierend auf IP und Netzmaske."""
         network = ipaddress.IPv4Network(f"{ip}/{subnetzmaske}", strict=False)
         return list(network.hosts())
 
-    def scan(self, ip: str, subnetzmaske: str) -> List[Geraet]:
+
+    def scan(self, ip: str, subnetzmaske: str, target_macs: list) -> List[Geraet]:
+
         network_range = self.get_network_range(ip, subnetzmaske)
 
         self.info(f"Manuelle IP-Adresse: {ip}, Netzmaske: {subnetzmaske}")
@@ -119,14 +142,8 @@ class Networkscanner:
         results = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-            futures = [executor.submit(self.scan_ip, next_ip, results) for next_ip in network_range]
+            futures = [executor.submit(self.scan_ip, next_ip, results, target_macs) for next_ip in network_range]
             for future in concurrent.futures.as_completed(futures):
                 future.result()  # Warten auf alle Threads
 
-        # print(f"fertig gescannt. {len(results)} interfaces gefunden. Gescannte IP's: {len(network_range)}")
-
         return results
-
-if __name__ == "__main__":
-    test = Networkscanner(1, True)
-    print(test.scan("192.168.89.0","255.255.255.0"))
