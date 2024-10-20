@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("port", type=int, help="Port number of the server")
 
     # Optionales Argument für das Theme hinzufügen
-    parser.add_argument("--theme", choices=["light", "dark"], default="light", help="Choose between 'light' or 'dark' theme (default: 'light')")
+    parser.add_argument("--theme", choices=["light", "dark"], default="dark", help="Choose between 'light' or 'dark' theme (default: 'light')")
 
     # Argumente parsen
     args = parser.parse_args()

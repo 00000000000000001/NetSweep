@@ -103,18 +103,7 @@ class Networkscanner:
                 print(mac_address)
 
                 results.append(
-                    Geraet(
-                        mac_address,
-                        str(ip),
-                        "",
-                        "",
-                        False,
-                        True,
-                        "",
-                        "",
-                        -1
-                    )
-                )
+                    Geraet(mac_address, str(ip), "", "", False, True, "", "", -1))
 
     def get_network_range(self, ip: str, subnetzmaske: str):
         """Berechnet den IP-Bereich des Netzwerks basierend auf IP und Netzmaske."""

@@ -1,3 +1,4 @@
+from typing_extensions import Optional
 from datenbank import Datenbank
 from netzwerkscanner import Geraet, Networkscanner
 from typing import List, Tuple
@@ -18,31 +19,32 @@ class NetSweep:
         self.scanner = Networkscanner(self.attempts, self.verbose, self.max_threads)
         self.db = Datenbank(None)
 
+
     def sweep(self, netzwerk_id):
         netsweep_thread = threading.Thread(target=self.run, args=(netzwerk_id,))
         netsweep_thread.start()
 
+
     def run(self, netzwerk_id):
-        def finde_geraet(mac_adresse, geraete_liste):
+        def finde_geraet(mac_adresse, geraete_liste) -> Optional[Geraet]:
             return next((geraet for geraet in geraete_liste if utils.compare_macs(geraet.mac, mac_adresse)), None)
 
         while True:
             basis_ip, subnetzmaske = self.ip_und_maske_ermitteln(netzwerk_id)
 
-            if not basis_ip or not subnetzmaske:
-                break
+            assert(basis_ip)
+            assert(subnetzmaske)
 
             geraete_online = self.scanner.scan(basis_ip, subnetzmaske)
-
             geraete_db = self.db.select_devices(netzwerk_id)
 
             liste = []
 
-            geraete_online_mac = [geraet.mac for geraet in geraete_online]
-
             for geraet in geraete_db:
-                if geraet.mac in geraete_online_mac:
-                    geraet_online = finde_geraet(geraet.mac, geraete_online)
+
+                geraet_online = finde_geraet(geraet.mac, geraete_online)
+
+                if geraet_online:
                     geraet.ip = geraet_online.ip
                     geraet.dns_name = geraet_online.dns_name
                     geraet.mdns_name = geraet_online.mdns_name
@@ -54,31 +56,40 @@ class NetSweep:
                     geraet.mdns_name = ''
                     geraet.vnc_status = False
                     geraet.online_status = False
+
                 liste.append(geraet)
 
-            self.deepscan_speichern(liste)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
+                futures = {}
+                for geraet in liste:
+                    # Submit the deepscan task and store the future object in a dictionary
+                    if geraet.online_status:
+                        futures[geraet] = executor.submit(self.deepscan, geraet)
+                    else:
+                        self.update_geraet(geraet)
+
+                # Iterate over the futures to ensure that deepscan is completed before updating
+                for geraet, future in futures.items():
+                    future.result()  # This will block until deepscan(geraet) finishes
+                    self.update_geraet(geraet)
 
             if self.callback:
                 self.callback()
 
-    def deepscan_speichern(self, geraete):
 
-        # print(geraete)
-        # quit()
+    def deepscan(self, geraet):
+        assert(geraet.ip)
+        assert(geraet.online_status)
+        print(f"scanning {geraet.mac} for dns name")
+        geraet.dns_name = self.scanner.get_dns_name(geraet.ip) or ''
+        print(f"scanning {geraet.mac} for mdns name")
+        geraet.mdns_name = self.scanner.get_mdns_name(geraet.ip) or ''
+        print(f"scanning {geraet.mac} for vnc status")
+        geraet.vnc_status = self.scanner.get_vnc_status(geraet.ip) or False
 
-        def deepscan(geraet):
 
-            if geraet.ip:
-                print(f"scanning {geraet.mac} for dns name")
-                geraet.dns_name = self.scanner.get_dns_name(geraet.ip) or ''
-                print(f"scanning {geraet.mac} for mdns name")
-                geraet.mdns_name = self.scanner.get_mdns_name(geraet.ip) or ''
-                print(f"scanning {geraet.mac} for vnc status")
-                geraet.vnc_status = self.scanner.get_vnc_status(geraet.ip) or False
-
-            # print(f"After deepscan: {geraet}")
-
-            sql_statement = f"""
+    def update_geraet(self, geraet: Geraet):
+        sql_statement = f"""
             UPDATE geraete
             SET
                 ip = CASE WHEN '{geraet.ip}' != '' THEN '{geraet.ip}' ELSE ip END,
@@ -87,23 +98,20 @@ class NetSweep:
                 vnc_status = {1 if geraet.vnc_status else 0},
                 online_status = {1 if geraet.online_status else 0}
             WHERE id = {geraet.id};
-                """
+            """
 
-            try:
-                self.db.commit_sql(sql_statement)
-            except Exception as e:
-                print(f"Gerät {geraet} konnte nicht dokumentiert werden: {e}")
+        try:
+            self.db.commit_sql(sql_statement)
+        except Exception as e:
+            print(f"Gerät {geraet} konnte nicht dokumentiert werden: {e}")
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_threads) as executor:
-            for geraet in geraete:
-                executor.submit(deepscan, geraet)
 
     def ip_und_maske_ermitteln(self, netzwerk_id) -> Tuple:
         sql_statement = f"""
-        SELECT basis_ip, subnetzmaske
-        FROM netzwerke
-        WHERE id = {netzwerk_id};
-        """
+            SELECT basis_ip, subnetzmaske
+            FROM netzwerke
+            WHERE id = {netzwerk_id};
+            """
         results = self.db.commit_sql(sql_statement)
         assert(results != None)
         if isinstance(results, List):
