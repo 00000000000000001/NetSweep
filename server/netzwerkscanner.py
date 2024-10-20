@@ -81,9 +81,11 @@ class Networkscanner:
 
     def ping_ip(self, ip: str):
         """Pingt eine IP-Adresse, um zu prüfen, ob das Gerät erreichbar ist."""
+
+        # self.info(f"pinging {ip}")
+
         success = False
         for i in range(self.attempts):
-            # self.print(f"pinge ip: {ip} ({i + 1}. Versuch)")
 
             if os.name == 'nt':  # Windows
                 command = ['ping', '-n', '1', '-w', '1000', str(ip)]  # 1000ms Timeout

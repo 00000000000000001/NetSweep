@@ -186,6 +186,16 @@ if __name__ == "__main__":
 
     # Print "Hello" if netzwerk_id is not provided
     if args.netzwerk_id is None:
+        logo = """
+        ▗▖  ▗▖▗▞▀▚▖   ■   ▗▄▄▖▄   ▄ ▗▞▀▚▖▗▞▀▚▖▄▄▄▄
+        ▐▛▚▖▐▌▐▛▀▀▘▗▄▟▙▄▖▐▌   █ ▄ █ ▐▛▀▀▘▐▛▀▀▘█   █
+        ▐▌ ▝▜▌▝▚▄▄▖  ▐▌   ▝▀▚▖█▄█▄█ ▝▚▄▄▖▝▚▄▄▖█▄▄▄▀
+        ▐▌  ▐▌       ▐▌  ▗▄▄▞▘                █
+                     ▐▌                       ▀
+        """
+
+        print(logo)
+
         st = ServerTools()
         st.setup_database()
         st.show_menu()
