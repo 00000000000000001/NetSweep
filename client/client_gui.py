@@ -31,7 +31,7 @@ class ClientGUI:
         # Create main window
         with dpg.window(label="Geräte", width=1200, height=400, no_close=True, tag='window_geraete'):
             with dpg.table(header_row=True,
-                row_background=True,
+                # row_background=True,
                 delay_search=True,
                 tag="table",
                 borders_innerH=True,
@@ -75,13 +75,23 @@ class ClientGUI:
         rows = dpg.get_item_children(sender, 1)
         columns = dpg.get_item_children(sender, 0)
 
+        assert(isinstance(columns, list))
+
         col_index = columns.index(sort_specs[0][0])
 
         # create a list that can be sorted based on first cell
         # value, keeping track of row and value used to sort
         sortable_list = []
+
+        # assert(rows)
+
         for row in rows:
-            first_cell = dpg.get_item_children(row, 1)[col_index]
+
+            children = dpg.get_item_children(row, 1)
+
+            assert(children)
+
+            first_cell = children[col_index]
 
             if not type(dpg.get_value(first_cell)) in (int, float, str):
                 return
@@ -162,7 +172,6 @@ class ClientGUI:
         dpg.bind_theme(light_theme)
 
     def run(self):
-        # Start the Dear PyGui event loop
         dpg.start_dearpygui()
         dpg.destroy_context()
 
@@ -218,7 +227,11 @@ class ClientGUI:
             dns_name = geraet["dns_name"].removesuffix('.localdomain') if geraet["dns_name"] else ""
             mdns_name = geraet["mdns_name"].removesuffix('.local.') if geraet["mdns_name"] else ""
 
-            index = len(dpg.get_item_children("table", 1)) # Wird von color_table benötigt um den originalen index nach umsortierung zu ermitteln
+            children = dpg.get_item_children("table", 1)
+
+            # assert(children)
+
+            index = len(children) # Wird von color_table benötigt um den originalen index nach umsortierung zu ermitteln
 
             with dpg.table_row(tag=f"row_{row_id}", parent="table", user_data=index):
                 dpg.add_text(geraet["ip"], tag=f"cell_{row_id}_ip")
@@ -305,53 +318,54 @@ class ClientGUI:
                                     dpg.set_value(checkbox_id, aufgabe_bool)
 
 
+        def check_and_mark_tree_node(node_id):
+            child_items = dpg.get_item_children(node_id, 1)  # 1 bedeutet, dass wir die direkten Kinder bekommen
+            all_checked = True
+            all_children_marked = True
+
+            for child in child_items:
+                item_type = dpg.get_item_type(child)
+                if item_type == "mvAppItemType::mvCheckbox":
+                    # Überprüfen, ob die Checkbox gecheckt ist
+                    if not dpg.get_value(child):
+                        all_checked = False
+                elif item_type == "mvAppItemType::mvTreeNode":
+                    # Rekursiver Aufruf für untergeordnete Baumknoten
+                    is_child_marked = check_and_mark_tree_node(child)
+                    if not is_child_marked:
+                        all_children_marked = False
+
+            # Wenn alle Checkboxen gecheckt sind und alle Kinder markiert sind, füge "DONE: " hinzu
+            label = dpg.get_item_label(node_id)
+            if all_checked and all_children_marked:
+                if not label.startswith("DONE: "):
+                    dpg.set_item_label(node_id, f"DONE: {label}")
+                return True
+            else:
+                # Andernfalls "DONE: " entfernen, falls vorhanden
+                if label.startswith("DONE: "):
+                    dpg.set_item_label(node_id, label[6:])
+                return False
+
+
         def markiere_erledigte_tree_nodes(group_id):
-            def check_and_mark_tree_node(node_id):
-                child_items = dpg.get_item_children(node_id, 1)  # 1 bedeutet, dass wir die direkten Kinder bekommen
-                all_checked = True
-                all_children_marked = True
-
-                for child in child_items:
-                    if dpg.get_item_type(child) == "mvAppItemType::mvCheckbox":
-                        # Überprüfen, ob die Checkbox gecheckt ist
-                        if not dpg.get_value(child):
-                            all_checked = False
-                    elif dpg.get_item_type(child) == "mvAppItemType::mvTreeNode":
-                        # Rekursiver Aufruf für untergeordnete Baumknoten
-                        is_child_marked = check_and_mark_tree_node(child)
-                        if not is_child_marked:
-                            all_children_marked = False
-
-                # Wenn alle Checkboxen gecheckt sind und alle Kinder markiert sind, füge "DONE: " hinzu
-                label = dpg.get_item_label(node_id)
-                if all_checked and all_children_marked:
-                    if not label.startswith("DONE: "):
-                        dpg.set_item_label(node_id, f"DONE: {label}")
-                    return True
-                else:
-                    # Andernfalls "DONE: " entfernen, falls vorhanden
-                    if label.startswith("DONE: "):
-                        dpg.set_item_label(node_id, label[6:])
-                    return False
-
             # Starte die Überprüfung und Markierung bei der Gruppe
             root_items = dpg.get_item_children(group_id, 1)
             for item in root_items:
                 if dpg.get_item_type(item) == "mvAppItemType::mvTreeNode":
                     check_and_mark_tree_node(item)
 
-        checklisten = geraet["checklisten"]
+        # Hauptcode
+        checklisten = geraet.get("checklisten", {})
         if not checklisten:
             return
 
-
-        for el in checklisten.items():
-
-            checklist_id = int(el[0])
-            checklist = el[1]
+        for checklist_id_str, checklist in checklisten.items():
+            checklist_id = int(checklist_id_str)
             erstelle_checklist_gui_baum(checklist, group_id, row_id, checklist_id)
 
         markiere_erledigte_tree_nodes(group_id)
+
 
 
     def add_button(self, geraet, row_id):
@@ -373,7 +387,7 @@ class ClientGUI:
 
             dpg.add_button(
                 label=geraet["vnc_status"],
-                width=50,
+                width=90,
                 callback=lambda s, u, a: execute_terminal_command(s, u, a),
                 tag=f"button_{row_id}"
             )

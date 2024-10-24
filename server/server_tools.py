@@ -3,6 +3,8 @@ import sqlite3
 from datenbank import Datenbank
 from utils import is_valid_ipv4, is_valid_subnet_mask, is_valid_mac, is_valid_checklist
 import json
+import time
+import sys
 
 class ServerTools:
     def __init__(self):
@@ -13,17 +15,32 @@ class ServerTools:
 
     def wizzard(self, command):
 
-        avatar = '🥷'
+        # avatar = '🥷'
 
         def say(msg):
             border = "-" * len(msg)
-            print(f"\n{avatar}\n{border}\n{msg}\n{border}\n")
+            # print(f"\n{avatar}\n{border}")
+            print()
+            for char in msg:
+                sys.stdout.write(char)
+                sys.stdout.flush()
+                time.sleep(0.001)  # Verzögerung von 50 Millisekunden
+            print(f"\n{border}\n")
 
         def ask(question: str):
             arr = question.split('\n')
             laengster_string = max(arr, key=len)
             border = "-" * len(laengster_string.strip())
-            return input(f"\n{avatar}\n{border}\n" + "\n".join(arr) + f"\n{border}\n> ")
+            # print(f"\n{avatar}\n{border}")
+            print()
+            for line in arr:
+                for char in line:
+                    sys.stdout.write(char)
+                    sys.stdout.flush()
+                    time.sleep(0.001)  # Verzögerung von 50 Millisekunden
+                sys.stdout.write("\n")  # Zeilenumbruch nach jeder Zeile
+            print(border)
+            return input("> ")
 
         def insert_network():
             name = ask("Wie ist der Name des Netzwerkes?")

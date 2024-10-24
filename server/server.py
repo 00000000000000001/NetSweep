@@ -140,7 +140,7 @@ class Server:
             # Konvertiere die Liste von JSON-Objekten zu einem JSON-String
             return json.dumps(json_liste, indent=4) + "<END_OF_JSON>"
 
-        print("Notifying clients...")
+        # print("Notifying clients...")
 
         geraete_liste = self.netSweep.db.select_devices(self.netzwerk_id)
 
@@ -168,6 +168,35 @@ class Server:
 
 if __name__ == "__main__":
 
+    def print_logo():
+
+        COLORS = [
+            "\033[38;5;214m",  # Annäherung an #F7A93D
+            "\033[38;5;203m",  # Annäherung an #DF6552
+            "\033[38;5;197m",  # Annäherung an #CE4458
+            "\033[38;5;163m",  # Annäherung an #962662
+            "\033[38;5;90m"    # Annäherung an #590C68
+        ]
+
+        RESET = "\033[0m"
+
+        logo = """
+        ▗▖  ▗▖▗▞▀▚▖  ▗▖   ▗▄▄▖▄   ▄ ▗▞▀▚▖▗▞▀▚▖▄▄▄▄
+        ▐▛▚▖▐▌▐▛▀▀▘▗▄▟▙▄▖▐▌   █ ▄ █ ▐▛▀▀▘▐▛▀▀▘█   █
+        ▐▌ ▝▜▌▝▚▄▄▖  ▐▌   ▝▀▚▖█▄█▄█ ▝▚▄▄▖▝▚▄▄▖█▄▄▄▀lol
+        ▐▌  ▐▌       ▐▌  ▗▄▄▞▘                █
+                     ▐▌                       ▀
+        """
+
+        logo_lines = logo.splitlines()
+        print(COLORS[0] + logo_lines[0] + RESET)
+        print(COLORS[1] + logo_lines[1] + RESET)
+        print(COLORS[2] + logo_lines[2] + RESET)
+        print(COLORS[3] + logo_lines[3] + RESET)
+        print(COLORS[4] + logo_lines[4] + RESET)
+
+
+
     # Argumente für IP und Port einrichten
     parser = argparse.ArgumentParser(description="Server Script")
 
@@ -186,15 +215,8 @@ if __name__ == "__main__":
 
     # Print "Hello" if netzwerk_id is not provided
     if args.netzwerk_id is None:
-        logo = """
-        ▗▖  ▗▖▗▞▀▚▖   ■   ▗▄▄▖▄   ▄ ▗▞▀▚▖▗▞▀▚▖▄▄▄▄
-        ▐▛▚▖▐▌▐▛▀▀▘▗▄▟▙▄▖▐▌   █ ▄ █ ▐▛▀▀▘▐▛▀▀▘█   █
-        ▐▌ ▝▜▌▝▚▄▄▖  ▐▌   ▝▀▚▖█▄█▄█ ▝▚▄▄▖▝▚▄▄▖█▄▄▄▀
-        ▐▌  ▐▌       ▐▌  ▗▄▄▞▘                █
-                     ▐▌                       ▀
-        """
 
-        print(logo)
+        print_logo()
 
         st = ServerTools()
         st.setup_database()
