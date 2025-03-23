@@ -5,6 +5,7 @@ from utils import is_valid_ipv4, is_valid_subnet_mask, is_valid_mac, is_valid_ch
 import json
 import time
 import sys
+import paramiko
 
 class ServerTools:
     def __init__(self):
@@ -238,11 +239,31 @@ class ServerTools:
             self.commit_sql(sql)
             say(f"✅ Checklisten gelöscht für Gerät {device_id}.")
 
+        def execute_terminal_command(command, username, password, host, port=22):
+
+            try:
+                print(f"[+] Verbinde mit {host}...")
+
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(host, port, username, password)
+
+                print("[+] Sende Befehl...")
+                stdin, stdout, stderr = ssh.exec_command(command)
+                stdin.write(password + '\n')  # sudo-Passwort
+                stdin.flush()
+
+                print("[✓] Befehl gesendet.")
+                ssh.close()
+            except Exception as e:
+                print("[✗] Fehler:", e)
+
         def edit_device(device_id):
             text = "1 - Checkliste auslegen\n"\
             "2 - Credentials hinterlegen\n"\
             "3 - Credentials löschen\n"\
             "4 - Checklisten löschen\n"\
+            "5 - Terminalkommando ausführen (SSH)"
 
             choice = ask(text)
 
@@ -255,6 +276,16 @@ class ServerTools:
                     remove_credentials(device_id)
                 case '4':
                     remove_checklists(device_id)
+                case '5':
+                    command = ask("Welches Kommando soll ich ausführen?")
+                    res = self.db.select_geraet(device_id)
+                    if not res:
+                        print(f"Es wurden keine Nutzerdaten für {device_id} gefunden.")
+                    else:
+                        username = res[0][10]
+                        password = res[0][11]
+                        host = res[0][2]
+                        execute_terminal_command(command, username, password, host)
 
         def edit_network(network_id):
             text = "1 - Gerät hinzufügen\n"\
@@ -263,7 +294,8 @@ class ServerTools:
             "4 - Credentials löschen (für alle Geräte im Netzwerk)\n"\
             "5 - Checklisten löschen (für alle Geräte im Netzwerk)\n"\
             "6 - Gerät entfernen\n"\
-            "7 - Gerät bearbeiten"
+            "7 - Gerät bearbeiten\n"\
+            "8 - Terminalkommando ausführen (SSH)"
 
             choice = ask(text)
 
@@ -282,6 +314,14 @@ class ServerTools:
                     remove_device(choose_device(network_id))
                 case '7':
                     edit_device(choose_device(network_id))
+                case '8':
+                    command = ask("Welches Kommando soll ich ausführen?")
+                    devices = self.db.select_devices(network_id)
+                    for device in devices:
+                        username = device.benutzer
+                        password = device.passwort
+                        host = device.ip
+                        execute_terminal_command(command, username, password, host)
 
         def show_menu():
             text = "1 - Server starten\n"\

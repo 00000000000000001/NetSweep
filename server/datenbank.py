@@ -222,6 +222,16 @@ class Datenbank:
         """
         return self.commit_sql(sql)
 
+    def select_geraet(self,  geraet_id: int):
+        sql = f"""SELECT * FROM geraete AS a
+        JOIN anmeldungen AS b
+        ON a.id = b.geraet_id
+        JOIN benutzer AS c
+        ON b.benutzer_id = c.id
+        WHERE b.geraet_id = {geraet_id};"""
+
+        return self.commit_sql(sql)
+
     def select_user(self, geraet_id: int):
         sql = f"""SELECT * FROM benutzer AS a
         JOIN anmeldungen AS b

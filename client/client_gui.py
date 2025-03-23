@@ -11,7 +11,7 @@ class ClientGUI:
     client_socket = ClientSocket
 
     def __init__(self, theme='dark'):
-        self.window_title = "NetSweep"
+        self.window_title = "NETRACK"
         # Farben definieren
         self.yellow_color = [255, 255, 0, 100]  # Gelb mit Transparenz
         self.red_color = [255, 0, 0, 100]       # Rot mit Transparenz
@@ -27,6 +27,8 @@ class ClientGUI:
 
         if theme=="light":
             self.set_light_theme()
+        else:
+            self.set_scifi_horror_theme()
 
         # Create main window
         with dpg.window(label="Geräte", width=1200, height=400, no_close=True, tag='window_geraete'):
@@ -170,6 +172,69 @@ class ClientGUI:
                 dpg.add_theme_color(dpg.mvThemeCol_ModalWindowDimBg, (240, 240, 240))
 
         dpg.bind_theme(light_theme)
+
+    def set_scifi_horror_theme(self):
+        with dpg.theme() as scifi_horror_theme:
+            with dpg.theme_component(dpg.mvAll):
+                dpg.add_theme_color(dpg.mvThemeCol_WindowBg, (10, 10, 15))  # Dunkles Grau-Schwarz
+                dpg.add_theme_color(dpg.mvThemeCol_ChildBg, (15, 15, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_Text, (220, 0, 0))  # Bedrohliches Rot
+                # dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 40, 40))  # Satteres Rot
+                dpg.add_theme_color(dpg.mvThemeCol_Button, (40, 40, 50))  # Stahlgrau
+                dpg.add_theme_color(dpg.mvThemeCol_ButtonHovered, (60, 10, 10))  # Rötliches Leuchten
+                dpg.add_theme_color(dpg.mvThemeCol_ButtonActive, (100, 0, 0))  # Intensives Rot
+                dpg.add_theme_color(dpg.mvThemeCol_Header, (30, 30, 40))
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderHovered, (60, 20, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_HeaderActive, (100, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (20, 20, 25))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgHovered, (40, 20, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_FrameBgActive, (70, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBg, (15, 15, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgActive, (30, 10, 10))
+                dpg.add_theme_color(dpg.mvThemeCol_TitleBgCollapsed, (10, 10, 15))
+                dpg.add_theme_color(dpg.mvThemeCol_MenuBarBg, (20, 20, 25))
+                dpg.add_theme_color(dpg.mvThemeCol_ScrollbarBg, (10, 10, 15))
+                dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrab, (50, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrabHovered, (70, 10, 10))
+                dpg.add_theme_color(dpg.mvThemeCol_ScrollbarGrabActive, (90, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_CheckMark, (220, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_SliderGrab, (60, 10, 10))
+                dpg.add_theme_color(dpg.mvThemeCol_SliderGrabActive, (90, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_Separator, (60, 60, 70))
+                dpg.add_theme_color(dpg.mvThemeCol_SeparatorHovered, (100, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_SeparatorActive, (130, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_ResizeGrip, (40, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_ResizeGripHovered, (80, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_ResizeGripActive, (120, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_Tab, (20, 20, 25))
+                dpg.add_theme_color(dpg.mvThemeCol_TabHovered, (80, 10, 10))
+                dpg.add_theme_color(dpg.mvThemeCol_TabActive, (120, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_TabUnfocused, (30, 30, 35))
+                dpg.add_theme_color(dpg.mvThemeCol_TabUnfocusedActive, (80, 20, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_DockingPreview, (150, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_DockingEmptyBg, (5, 5, 10))
+                dpg.add_theme_color(dpg.mvThemeCol_PlotLines, (220, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_PlotLinesHovered, (255, 50, 50))
+                dpg.add_theme_color(dpg.mvThemeCol_PlotHistogram, (80, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_PlotHistogramHovered, (100, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_TableHeaderBg, (30, 30, 35))
+                dpg.add_theme_color(dpg.mvThemeCol_TableBorderStrong, (70, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_TableBorderLight, (50, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBg, (15, 15, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_TableRowBgAlt, (10, 10, 15))
+                dpg.add_theme_color(dpg.mvThemeCol_TextSelectedBg, (150, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_DragDropTarget, (200, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_NavHighlight, (255, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_NavWindowingHighlight, (150, 0, 0))
+                dpg.add_theme_color(dpg.mvThemeCol_NavWindowingDimBg, (10, 10, 20))
+                dpg.add_theme_color(dpg.mvThemeCol_ModalWindowDimBg, (5, 5, 10))
+
+        dpg.bind_theme(scifi_horror_theme)
+
+        with dpg.font_registry():
+            my_font = dpg.add_font("fonts/Orbitron/Orbitron-VariableFont_wght.ttf", 18)  # Beispiel: Orbitron für Sci-Fi-Look
+
+        dpg.bind_font(my_font)
 
     def run(self):
         dpg.start_dearpygui()
@@ -455,7 +520,8 @@ class ClientGUI:
             if online_status == "False":  # online_status
                 dpg.highlight_table_row(table="table", row=index, color=self.red_color)
             elif vnc_status == "False":  # vnc_status
-                dpg.highlight_table_row(table="table", row=index, color=self.blue_color)
+                # dpg.highlight_table_row(table="table", row=index, color=self.blue_color)
+                dpg.highlight_table_row(table="table", row=index, color=self.no_color)
             else:
                 dpg.highlight_table_row(table="table", row=index, color=self.no_color)
 
