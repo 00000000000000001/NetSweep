@@ -9,9 +9,10 @@ from client_socket import ClientSocket
 
 class ClientGUI:
     client_socket = ClientSocket
+    selected_row = -1
 
     def __init__(self, theme='dark'):
-        self.window_title = "NETRACK"
+        self.window_title = "MACTRACK"
         # Farben definieren
         self.yellow_color = [255, 255, 0, 100]  # Gelb mit Transparenz
         self.red_color = [255, 0, 0, 100]       # Rot mit Transparenz
@@ -21,6 +22,8 @@ class ClientGUI:
         self.no_color = [0, 0, 0, 0]            # Keine Färbung (transparent)
 
         self.erstellte_checklisten_elemente = set()
+
+        self.last_pressed_button = None
 
         # Initialize Dear PyGui context
         dpg.create_context()
@@ -431,34 +434,55 @@ class ClientGUI:
 
         markiere_erledigte_tree_nodes(group_id)
 
-
-
     def add_button(self, geraet, row_id):
-
-        def execute_terminal_command(s, u, a):
+        def execute_terminal_command():
             print(f"executing terminal command: {osascript_command}")
             os.system(f'osascript -e \'{osascript_command}\'')
+
+        def on_button_click():
+            # Vorherigen Button-Text zurücksetzen
+            if self.last_pressed_button:
+                original_label = dpg.get_item_label(self.last_pressed_button)
+                if original_label.endswith(" *"):
+                    dpg.set_item_label(self.last_pressed_button, original_label[:-2])
+
+            # Sternchen an aktuellen Button hängen
+            current_label = dpg.get_item_label(button_tag)
+            if not current_label.endswith(" *"):
+                dpg.set_item_label(button_tag, current_label + " *")
+
+            self.last_pressed_button = button_tag
+
+            execute_terminal_command()
 
         benutzer = geraet["benutzer"].replace(" ", "%20") if geraet["benutzer"] else ""
         passwort = geraet["passwort"]
         ip = geraet["ip"]
 
-        if benutzer != "" and passwort == "":
+        if benutzer and not passwort:
             osascript_command = f'do shell script "open vnc://{benutzer}@{ip}"'
-        elif benutzer == "" and passwort == "":
+        elif not benutzer and not passwort:
             osascript_command = f'do shell script "open vnc://{ip}"'
         else:
             osascript_command = f'do shell script "open vnc://{benutzer}:{passwort}@{ip}"'
 
-            dpg.add_button(
-                label=geraet["vnc_status"],
-                width=90,
-                callback=lambda s, u, a: execute_terminal_command(s, u, a),
-                tag=f"button_{row_id}"
-            )
+        button_tag = f"button_{row_id}"
+        dpg.add_button(
+            label=geraet["vnc_status"],
+            width=90,
+            callback=on_button_click,
+            tag=button_tag
+        )
 
     def set_button(self, geraet, row_id):
-        dpg.set_item_label(f"button_{row_id}", geraet["vnc_status"])
+        button_tag = f"button_{row_id}"
+        label = str(geraet["vnc_status"])
+
+        # Wenn dieser Button der zuletzt gedrückte ist, Sternchen anhängen
+        if self.last_pressed_button == button_tag and not label.endswith(" *"):
+            label += " *"
+
+        dpg.set_item_label(button_tag, label)
 
     def checkbox_callback(self, checklist_id, pfad, erledigt):
 
