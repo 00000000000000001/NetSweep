@@ -6,6 +6,8 @@ import json
 import time
 import sys
 import paramiko
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 
 class ServerTools:
     def __init__(self):
@@ -75,10 +77,8 @@ class ServerTools:
 
             return choice
 
-        def insert_device(network_id):
-            mac = ask("Wie lautet die MAC-Adresse des Geräts?")
-
-            if not is_valid_mac:
+        def insert_geraet_by_mac(network_id, mac):
+            if not is_valid_mac(mac):
                 say(f"🚫 {mac} ist keine gültige MAC-Adresse")
                 return
 
@@ -86,6 +86,11 @@ class ServerTools:
             if isinstance(device_id, int):
                 self.db.insert_netzwerkteilnahme(network_id, device_id)
                 say(f"✅ Gerät hinzugefügt.")
+
+        def insert_device(network_id):
+            mac = ask("Wie lautet die MAC-Adresse des Geräts?")
+
+            insert_geraet_by_mac(network_id, mac)
 
         def distribute_checklist_network(network_id, json_data):
 
@@ -287,7 +292,39 @@ class ServerTools:
                         host = res[0][2]
                         execute_terminal_command(command, username, password, host)
 
+        def parse_liste(liste_pfad):
+            """
+            Liest eine Datei mit dem gegebenen Pfad ein, filtert alle MAC-Adressen heraus
+            und gibt sie als Python-Liste zurück.
+
+            :param liste_pfad: Pfad zur Textdatei
+            :return: Liste von MAC-Adressen
+            """
+            mac_adressen = []
+
+            # Regulärer Ausdruck für MAC-Adressen (z. B. 00:1A:2B:3C:4D:5E oder 00-1A-2B-3C-4D-5E)
+            mac_regex = re.compile(r'(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}')
+
+            try:
+                with open(liste_pfad, 'r') as file:
+                    for line in file:
+                        gefundene_macs = mac_regex.findall(line)
+                        mac_adressen.extend(gefundene_macs)
+            except FileNotFoundError:
+                print(f"Datei nicht gefunden: {liste_pfad}")
+            except Exception as e:
+                print(f"Fehler beim Verarbeiten der Datei: {e}")
+
+            return mac_adressen
+
         def edit_network(network_id):
+
+            def run_command_on_device(device, command):
+                username = device.benutzer
+                password = device.passwort
+                host = device.ip
+                return execute_terminal_command(command, username, password, host)
+
             text = "1 - Gerät hinzufügen\n"\
             "2 - Checkliste auslegen (für alle Geräte im Netzwerk)\n"\
             "3 - Credentials hinterlegen (für alle Geräte im Netzwerk)\n"\
@@ -295,7 +332,8 @@ class ServerTools:
             "5 - Checklisten löschen (für alle Geräte im Netzwerk)\n"\
             "6 - Gerät entfernen\n"\
             "7 - Gerät bearbeiten\n"\
-            "8 - Terminalkommando ausführen (SSH)"
+            "8 - Terminalkommando ausführen (SSH)\n"\
+            "9 - Geräte aus Liste hinzufügen"
 
             choice = ask(text)
 
@@ -317,11 +355,24 @@ class ServerTools:
                 case '8':
                     command = ask("Welches Kommando soll ich ausführen?")
                     devices = self.db.select_devices(network_id)
-                    for device in devices:
-                        username = device.benutzer
-                        password = device.passwort
-                        host = device.ip
-                        execute_terminal_command(command, username, password, host)
+                    max_threads = 10
+
+                    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+                        # Starte alle Tasks parallel
+                        futures = [executor.submit(run_command_on_device, device, command) for device in devices]
+
+                        # Optional: Ergebnisse abwarten und verarbeiten
+                        for future in as_completed(futures):
+                            try:
+                                result = future.result()
+                                print(f"Ergebnis: {result}")
+                            except Exception as e:
+                                print(f"Fehler beim Ausführen: {e}")
+                case '9':
+                    liste_pfad = ask("Wo ist die Liste gespeichert?").strip()
+                    list_geraete = parse_liste(liste_pfad)
+                    for mac in list_geraete:
+                        insert_geraet_by_mac(network_id, mac)
 
         def show_menu():
             text = "1 - Server starten\n"\
